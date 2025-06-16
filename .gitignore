@@ -1,0 +1,35 @@
+# Sensitive environment files
+.env
+*.env
+
+# Backup scripts and data
+backup-*.sh
+/opt/backups/
+
+# Docker volumes
+n8n_data/
+caddy_data/
+caddy_config/
+
+# Node modules and logs
+node_modules/
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*.bak
+*~
+
+# Ignore any SQLite database files (if copied out)
+database.sqlite
+
+# Ignore SSH keys
+*.pem
+*.key
+*.pub
+.ssh/ 
