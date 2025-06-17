@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Read [README.md](mdc:README.md) to understand how our N8N self-hosted is set up.
+
+When you need to run operations in our N8N docker instance, use `ssh hetzner '...'`, e.g. to get logs from the docker use `ssh hetzner 'cd /opt/n8n && docker compose logs n8n --tail 50'`.
+
+Use context7 for official library and methods documentation.
+
+When asked about creating, updating, editing or doing anything about N8N workflows, use contxt7 to find out the specifics of what nodes, operations and modules are available on N8N.

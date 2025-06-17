@@ -1,0 +1,1907 @@
+{
+  "name": "Short Form Video Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://queue.fal.run/fal-ai/flux-pro/kontext/text-to-image",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "={{ $json.output }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ba1c73c6-fa5e-4e58-a73e-be9f5af83fc6",
+      "name": "Generate Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1040,
+        -20
+      ],
+      "retryOnFail": false,
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "mZgUIZvcJWfL9yVo",
+          "name": "FAL KEY"
+        },
+        "httpHeaderAuth": {
+          "id": "XOJVICCiAwTQ4Efb",
+          "name": "Fal Header Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.piapi.ai/api/v1/task",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $('Set API Keys').item.json['PiAPI Key'] }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\n  \"model\": \"kling\",\n  \"task_type\": \"video_generation\",\n  \"input\": {\n    \"prompt\": \"{{ $json.data.input.prompt }}\",\n    \"negative_prompt\": \"blurry motion, distorted faces, unnatural lighting, over produced, bad quality\",\n    \"cfg_scale\": 0.5,\n    \"duration\": 5,\n    \"mode\": \"pro\",\n    \"image_url\": \"{{ $json.data.output.image_url }}\",\n    \"version\": \"1.6\",\n    \"camera_control\": {\n      \"type\": \"simple\",\n      \"config\": {\n        \"horizontal\": 0,\n        \"vertical\": 0,\n        \"pan\": 0,\n        \"tilt\": 0,\n        \"roll\": 0,\n        \"zoom\": 5\n      }\n    }\n  },\n  \"config\": {}\n}",
+        "options": {}
+      },
+      "id": "1f013d70-39ac-444f-bda8-ad0ac3e2920a",
+      "name": "Image-to-Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        140,
+        760
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "url": "=https://api.piapi.ai/api/v1/task/{{ $json.data.task_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $('Set API Keys').item.json['PiAPI Key'] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6d5cff2d-c5f0-491e-a67f-8b9998302125",
+      "name": "Get Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        400,
+        760
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    scene_titles: items.map(item => item.json.response.text),\n    video_urls: items.map(item => item.json.data.output.video_url),\n    input_tokens: $('Calculate Token Usage').first().json.total_prompt_tokens,\n    output_tokens: $('Calculate Token Usage').first().json.total_completion_tokens,\n    model: $('Generate Image Prompts').first().json.model\n  }\n];"
+      },
+      "id": "b5a90dc7-f111-447f-b38a-6c0b26ac2329",
+      "name": "List Elements",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1020,
+        800
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "amount": 10,
+        "unit": "minutes"
+      },
+      "id": "d65af086-5154-4f6f-aa2a-76b4edbd5388",
+      "name": "Wait 10min",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        280,
+        760
+      ],
+      "webhookId": "1f9d716f-6544-4e4e-94ec-408ac3ea6e82",
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.elevenlabs.io/v1/text-to-speech/onwK4e9ZLuTAKqWW03F9",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "xi-api-key",
+              "value": "={{ $('Set API Keys').item.json['ElevenLabs API Key'] }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $json.choices[0].message.content }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "73cb9d07-62cd-4c1b-a940-0e21181ceb6c",
+      "name": "Generate voice",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        500,
+        1220
+      ],
+      "retryOnFail": false,
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    sound_urls: items.map(item => $('Upload Voice Audio').first().json.webContentLink)\n  }\n];"
+      },
+      "id": "4df2443e-ec82-45f8-a53b-07db812fed0c",
+      "name": "List Elements1",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1020,
+        1020
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "a920eb54-fc23-4b68-8f56-2eee907a5481",
+              "operator": {
+                "name": "filter.operator.equals",
+                "type": "string",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json.data.status }}",
+              "rightValue": "failed"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bba39309-bbf8-48dc-aaeb-6f271360281f",
+      "name": "Fail check",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        540,
+        760
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "unit": "minutes"
+      },
+      "id": "cbfde68a-91ca-47da-bd11-b63f1b6cb83e",
+      "name": "Wait to retry",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        680,
+        720
+      ],
+      "webhookId": "3b0fae8f-4419-45cd-8380-8f72eca05ff8",
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "content": "## 2. 🖼️Generate images with Flux using [PiAPI](https://piapi.ai/?via=n8n) \n### (total cost: $0.0948 approx. as of 3/9/25)\n1. OpenAI is used to generate 5 Flux image prompts based on the 5 captions generated. Edit this node to see/edit the prompt instructions. \n2. Next we use some custom javascript to total up how many tokens were used for each 5 generations so we can track our costs later.\n3. Then we generate an image with Flux using the [PiAPI service](https://piapi.ai/?via=n8n), waiting to check for failures and retrying if there are any.\n\nYou can change the image model used by editing the Generate Image node API call.\nFlux models available (as of 3/9/25):\n- Qubico/flux1-dev ($0.015) - Currently set\n- Qubico/flux1-schnell ($0.0015)\n- Qubico/flux1-advanced ($0.02)\n\nFor full list of API settings, see the [Flux API Documentation](https://piapi.ai/docs/flux-api/text-to-image?via=n8n)\n",
+        "height": 460,
+        "width": 1260,
+        "color": 5
+      },
+      "id": "93609fb1-8f9a-41f9-9bf9-b62fc21e0be1",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -40,
+        -220
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## 3. 🎬Generate videos with Kling using [PiAPI](https://piapi.ai/?via=n8n)\n### (total cost: $2.30 approx. as of 3/9/25)\n1. We use image-to-video with Kling using [PiAPI](https://piapi.ai/?via=n8n) to generate a video from each image.\n2. Then we wait to check for failures, and repeat the generations the failed if there are any.\n\nYou can edit the video model used in the Image-to-Video node. For testing, I'd recommend switching from pro to std for lower quality and cheaper price.\nKling models available (as of 3/9/25):\n- std (Standard) $0.26 per 5 second video\n- pro (Professional) $0.46 per 5 second video - Currently set\n\nFor full list of API settings, see the [Kling API Documentation](https://piapi.ai/docs/kling-api/create-task?via=n8n)\n",
+        "height": 500,
+        "width": 1040,
+        "color": 6
+      },
+      "id": "7301ad7d-a79f-4447-95b6-36e0d59d1576",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        100,
+        480
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=DO NOT include any quotation marks in your response. Do not put a quote at the beginning or the end of your response.\n\nYou are a prompt-generation AI specializing in crafting unhinged, entertaining TikTok captions for a \"day in the life\" POV story about automating business processes with AI (ChatGPT, Claude, Perplexity, etc...). Generate five concise, action-driven captions (5-10 words each) that follow a Problem > Action > Reward structure. The first caption should be a shocking or funny hook, and the last should conclude with a satisfying reward. Use emojis sparingly—only one per caption at most, and only when they add impact; skip them if they don’t enhance the message.\n\nGuidelines:\n\nPerspective: Always first-person POV, immersing the viewer in the story.\nTone: Channel Andrew Tate mixed with Charlie Sheen—cursing and business swagger are fair game. Think \"hustle culture meets no-bullshit reality.\"\nContent: Focus on job seeking, hunting, or resume building, spotlighting AI as the game-changer.\nNarrative: Start with the grind of manual boring tasks, pivot to using AI for automation, and end with scoring the dream gig.\nScenes: Highlight raw, emotional moments—skip the boring stuff.\nYour captions should be wild and entertaining, not polished or professional. The first caption is the hook—make it shocking, hilarious, or ballsy, something Andrew Tate would growl. Use emojois, Sparingly—max one per caption, only if it hits harder with it. Think 💀🔥😈💰🦀 not 😊✨🙌\n\nYour response should be a list of 5 items separated by \"\\n\" (for example: \"item1\\nitem2\\nitem3\\nitem4\\nitem5\")",
+              "role": "system"
+            },
+            {
+              "content": "={{ $json.idea }}"
+            }
+          ]
+        },
+        "simplify": false,
+        "options": {}
+      },
+      "id": "e7ef2ad2-3f8f-475d-a2eb-ad716c56af6c",
+      "name": "Generate Video Captions",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [
+        -900,
+        1380
+      ],
+      "typeVersion": 1.8,
+      "credentials": {
+        "openAiApi": {
+          "id": "kF6ODPmrvyTpnk8L",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## 4. 🔉Generate voice overs with [Eleven Labs](https://try.elevenlabs.io/n8n)\n1. OpenAI API is used to generate a funny script that relates to the captions. Open this node to see/edit the prompt instructions. \n2. Then we use the [Eleven Labs API](https://try.elevenlabs.io/n8n) to generate the voiceover and upload it to our Google Drive so it can be accessed in the next step.\n\nTo replace the voice, find the voice ID of the voice you want to use in [Eleven Labs](https://try.elevenlabs.io/n8n), then change the URL in the Generate Voice node to: https://api.elevenlabs.io/v1/text-to-speech/{voice ID here}\n\nFor full list of API settings, see the [Eleven Labs API Documentation](https://elevenlabs.io/docs/api-reference/text-to-speech/convert)\n",
+        "height": 400,
+        "width": 1040,
+        "color": 4
+      },
+      "id": "5f28e7ab-3c80-4937-9361-f24df392a922",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        100,
+        1000
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "id": "05325403-6426-4413-b8ad-b1229cd284c0",
+      "name": "Match captions with videos",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        860,
+        800
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are an unhinged and hilarious TikTok influencer who's like a mix of Andrew Tate and Charlie Sheen. The user is going to provide you with a topic, and then 5 different parts of a story. Your task is to narrate the story as this hilarious character, who isn't afraid to be edgy or curse or use sexual innuendos. However keep each of the 5 talking points brief, as you only have about 5 seconds to speak during each. The entire length of your narration should be around 15 seconds.\n\nEach line item of the users message represents 1 5 second clip, so your response needs to be able to quickly and easily be spoken in those time constraints. Don't say extra things you don't need to. Just quickly tell the story, in order, and make it unhinged, funny, entertaining, and potentially controversially viral. Don't worry about offendeding anyone. Andrew Tate style it.\n\nDo not include any emojis, as your response will be converted from text to speech, so anything but text and punctuation isn't neccesary. Also, don't make your jokes overly corny, speak in a witty, edgy, funny way, but no corny dad jokes or anything cringe.",
+              "role": "system"
+            },
+            {
+              "content": "={{ $json['0'] }}{{ $json['1'] }}{{ $json['2'] }}{{ $json['3'] }}{{ $json['4'] }}"
+            }
+          ]
+        },
+        "simplify": false,
+        "options": {}
+      },
+      "id": "813d1a8a-0867-445e-bbcb-461476048f3d",
+      "name": "Generate Script",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [
+        140,
+        1220
+      ],
+      "executeOnce": true,
+      "typeVersion": 1.8,
+      "credentials": {
+        "openAiApi": {
+          "id": "kF6ODPmrvyTpnk8L",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Load Google Sheet').item.json.id }}-voiceover.mp3",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1qAw1e6KkeGQDn86Z8MaPVgKFWFwGdYp1",
+          "mode": "list",
+          "cachedResultName": "short form video automation",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1qAw1e6KkeGQDn86Z8MaPVgKFWFwGdYp1"
+        },
+        "options": {}
+      },
+      "id": "7bcf6808-59c1-445e-b6d5-55b242947596",
+      "name": "Upload Voice Audio",
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [
+        700,
+        1220
+      ],
+      "typeVersion": 3,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "h5RrIhAJ261ZevdQ",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "share",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "permissionsUi": {
+          "permissionsValues": {
+            "role": "writer",
+            "type": "anyone",
+            "allowFileDiscovery": true
+          }
+        },
+        "options": {}
+      },
+      "id": "139fb9de-203b-4e2e-bac6-342eabbcdc04",
+      "name": "Set Access Permissions",
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [
+        880,
+        1220
+      ],
+      "typeVersion": 3,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "h5RrIhAJ261ZevdQ",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "id": "b75ce77f-bf6d-4985-a92b-13976df75c46",
+      "name": "Pair Videos with Audio",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        1240,
+        900
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.creatomate.com/v1/renders",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Set API Keys').item.json['Creatomate API Key'] }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\n  \"template_id\": \"{{ $('Set API Keys').item.json['Creatomate Template ID'] }}\",\n  \"modifications\": {\n    \n    \"Video-1.source\": \"{{ $json.video_urls[0] }}\",\n    \"Video-2.source\": \"{{ $json.video_urls[1] }}\",\n    \"Video-3.source\": \"{{ $json.video_urls[2] }}\",\n    \"Video-4.source\": \"{{ $json.video_urls[3] }}\",\n    \"Video-5.source\": \"{{ $json.video_urls[4] }}\",\n\n    \"Audio-1.source\": \"{{ $json.sound_urls[0] }}\",\n\n    \"Text-1.text\": \"{{ $json.scene_titles[0] }}\",\n    \"Text-2.text\": \"{{ $json.scene_titles[1] }}\",\n    \"Text-3.text\": \"{{ $json.scene_titles[2] }}\",\n    \"Text-4.text\": \"{{ $json.scene_titles[3] }}\",\n    \"Text-5.text\": \"{{ $json.scene_titles[4] }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "e04cc35a-51ff-4b56-ae76-c85b38775399",
+      "name": "Render Final Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1420,
+        900
+      ],
+      "executeOnce": true,
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=A new Resume Studio POV video has been created: {{ $json.final_output }}",
+        "options": {}
+      },
+      "id": "6ffef090-9b32-45ab-a1f6-18cab496d166",
+      "name": "Notify me on Discord",
+      "type": "n8n-nodes-base.discord",
+      "position": [
+        2400,
+        900
+      ],
+      "webhookId": "1541bc50-06e4-48e8-8c76-23850ee4edf6",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "id": "0b98ca87-42b7-40dc-80d6-978d244f14b1",
+      "name": "Once Per Day",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        -980,
+        980
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1eczD3YHfNWLrQLEFAU4U1R4xZH1qigDIC8MJRabC73Q",
+          "mode": "list",
+          "cachedResultName": "AI Automated Social Media Short-Form Video Generator",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1eczD3YHfNWLrQLEFAU4U1R4xZH1qigDIC8MJRabC73Q/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1eczD3YHfNWLrQLEFAU4U1R4xZH1qigDIC8MJRabC73Q/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "id",
+              "lookupValue": "1"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "id": "af605c0b-28f9-4bd7-87d9-25c41c95eba8",
+      "name": "Load Google Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        -560,
+        980
+      ],
+      "typeVersion": 4.5,
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "wu9Syt2VpcXb0QJ9",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## 5. 📥Complete video with [Creatomate](https://creatomate.com/)\n### (total cost: $0.38 approx. with the Essential plan credits | Free trial credits available)\n1. First, the list of videos/captions is combined with the generated voice over into a single item containing all 3 elements.\n2. Those are then passed over to the Creatomate Template ID you specified, replacing the template captions/video/audio with your generated ones.\n3. When the video is finished rendering, it's then uploaded to Google Drive and the permissions set so it can be accessed with a link.\n4. Then we update the original Google Sheet template with the information from our generation, including tokens to calculate cost, then mark this idea as completed.\n5. Finally, we send a notification to via [webhook to the Discord server](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) when the video is ready to be downloaded and used!\n\n",
+        "height": 380,
+        "width": 1360,
+        "color": 3
+      },
+      "id": "b399ba6e-76a4-45a4-9c10-940a2589d3e5",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1180,
+        680
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "# 🤖 AI-Powered Short-Form Video Generator with OpenAI, Flux, Kling, and ElevenLabs\n\n## 📃Before you get started, you'll need:\n- [n8n installation](https://n8n.partnerlinks.io/n8nTTVideoGenTemplate) (tested on version 1.81.4)\n- [OpenAI API Key](https://platform.openai.com/api-keys) (free trial credits available)\n- [PiAPI](https://piapi.ai/?via=n8n) (free trial credits available)\n- [Eleven Labs](https://try.elevenlabs.io/n8n) (free account)\n- [Creatomate API Key](https://creatomate.com/) (free trial credits available)\n- Google Sheets API enabled in [Google Cloud Console](https://console.cloud.google.com/apis/api/sheets.googleapis.com/overview)\n- Google Drive API enabled in [Google Cloud Console](https://console.cloud.google.com/apis/api/drive.googleapis.com/overview)\n- OAuth 2.0 Client ID and Client Secret from your [Google Cloud Console Credentials](https://console.cloud.google.com/apis/credentials)\n",
+        "height": 420,
+        "width": 620
+      },
+      "id": "22198ed7-d568-4704-a8f9-6f899f228091",
+      "name": "Sticky Note4",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -700,
+        40
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## 1. 🗨️Generate video captions from ideas in a Google Sheet\n\n1. Setup your API keys for [PiAPI](https://piapi.ai/?via=n8n), [Eleven Labs](https://try.elevenlabs.io/n8n), and [Creatomate](https://creatomate.com/).\n- Once logged in to your Creatomate account, create a new video template and click \"source code\" in the top right. [Paste this JSON code](https://pastebin.com/c7aMTeLK). This will be your example template for this workflow.\n- In your Creatomate template, click the \"Use Template\" button in the top right and then click \"API Integration\" and you'll see your template_id. Set this value as your Creatomate Template ID in the Set API Keys node\n\n2. The next node will load a Google Sheet, you can copy the [Google Sheet Template](https://docs.google.com/spreadsheets/d/1cjd8p_yx-M-3gWLEd5TargtoB35cW-3y66AOTNMQrrM/edit?usp=sharing), simply choose File > Make a copy. Then in the Google Sheets node, connect to your copied sheet template.\n\n3. Next, we generate 5 captions for our video idea with OpenAI. You can edit this node to see the prompt and change it to your needs.\n\n4. In the final two nodes, we use custom javascript code to turn the OpenAI response into a list. Then, it validates to make sure the list was formed correctly (incase of an OpenAI failure to follow instructions)\n",
+        "height": 940,
+        "width": 920,
+        "color": 7
+      },
+      "id": "f4c224a6-dc42-4545-a8f3-714a8e58c275",
+      "name": "Sticky Note5",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -860,
+        540
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "amount": 3,
+        "unit": "minutes"
+      },
+      "id": "c6b99dc2-f7ed-4908-b28c-4dd5c6609b5b",
+      "name": "Wait1",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        1540,
+        900
+      ],
+      "webhookId": "206d0cdf-b71f-44a7-909f-97df885c471a",
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "url": "=https://api.creatomate.com/v1/renders/{{ $('Render Final Video').item.json.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Set API Keys').item.json['Creatomate API Key'] }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "23e0fe37-5bea-4fb6-b083-c2e7520a7e75",
+      "name": "Get Final Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1660,
+        900
+      ],
+      "executeOnce": true,
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "name": "=POV-{{ $('Render Final Video').item.json.id }}.mp4",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1w1EQ8xyth6w7AbX2wpDI3vInfYeRy8vH",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1w1EQ8xyth6w7AbX2wpDI3vInfYeRy8vH",
+          "cachedResultName": "Resume Studio"
+        },
+        "options": {}
+      },
+      "id": "23598502-ea07-4330-945b-902fc4336a74",
+      "name": "Upload Final Video",
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [
+        1920,
+        900
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "ccd0959f-7da2-421a-8d1a-280ba6e9f962",
+      "name": "Get Raw File",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1780,
+        900
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "operation": "share",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "permissionsUi": {
+          "permissionsValues": {
+            "role": "writer",
+            "type": "anyone",
+            "allowFileDiscovery": true
+          }
+        },
+        "options": {}
+      },
+      "id": "5546e618-afc4-4278-80df-b3902607d207",
+      "name": "Set Permissions",
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [
+        2060,
+        900
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1cjd8p_yx-M-3gWLEd5TargtoB35cW-3y66AOTNMQrrM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1cjd8p_yx-M-3gWLEd5TargtoB35cW-3y66AOTNMQrrM/edit?usp=drivesdk",
+          "cachedResultName": "Sheet Template"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gid=0",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1cjd8p_yx-M-3gWLEd5TargtoB35cW-3y66AOTNMQrrM/edit#gid=0",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "value": {
+            "id": "={{ $('Load Google Sheet').first().json.id }}",
+            "width": "={{ $('Get Raw File').item.json.width }}",
+            "height": "={{ $('Get Raw File').item.json.height }}",
+            "model1": "={{ $('Generate Video Captions').item.json.model }}",
+            "model2": "={{ $('Pair Videos with Audio').item.json.model }}",
+            "model3": "={{ $('Generate Script').item.json.model }}",
+            "duration": "={{ $('Get Raw File').item.json.duration }}",
+            "fluxCost": "0.075",
+            "frameRate": "={{ $('Get Raw File').item.json.frame_rate }}",
+            "klingCost": "2.3",
+            "production": "done",
+            "publishing": "for publishing",
+            "final_output": "={{ $('Upload Final Video').item.json.webContentLink }}",
+            "prompt1 input tokens": "={{ $('Generate Video Captions').item.json.usage.prompt_tokens }}",
+            "prompt2 input tokens": "={{ $('Pair Videos with Audio').item.json.input_tokens }}",
+            "prompt3 input tokens": "={{ $('Generate Script').item.json.usage.prompt_tokens }}",
+            "prompt1 output tokens": "={{ $('Generate Video Captions').item.json.usage.completion_tokens }}",
+            "prompt2 output tokens": "={{ $('Pair Videos with Audio').item.json.output_tokens }}",
+            "prompt3 output tokens": "={{ $('Generate Script').item.json.usage.completion_tokens }}"
+          },
+          "schema": [
+            {
+              "id": "id",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "id",
+              "defaultMatch": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "idea",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "idea",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "caption",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "caption",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "production",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "production",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "environment_prompt",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "environment_prompt",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "publishing",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "publishing",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "final_output",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "final_output",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "width",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "width",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "height",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "height",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "duration",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "duration",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "frameRate",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "frameRate",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "model1",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "model1",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "prompt1 input tokens",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "prompt1 input tokens",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "prompt1 output tokens",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "prompt1 output tokens",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "model1 cost",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "model1 cost",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "model2",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "model2",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "prompt2 input tokens",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "prompt2 input tokens",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "prompt2 output tokens",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "prompt2 output tokens",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "model2 cost",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "model2 cost",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "model3",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "model3",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "prompt3 input tokens",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "prompt3 input tokens",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "prompt3 output tokens",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "prompt3 output tokens",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "model3 cost",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "model3 cost",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cmCost",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "cmCost",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "upgradeCmCost",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "upgradeCmCost",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fluxCost",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "fluxCost",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "klingCost",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "klingCost",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "totalCost",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "totalCost",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "datePosted",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "datePosted",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "type": "string",
+              "display": true,
+              "removed": true,
+              "readOnly": true,
+              "required": false,
+              "displayName": "row_number",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "id"
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "8e448062-6341-4779-b816-75e06a864cbd",
+      "name": "Update Google Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        2220,
+        900
+      ],
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "wu9Syt2VpcXb0QJ9",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "35659353-d8e2-4677-876b-401b549605a0",
+              "name": "PiAPI Key",
+              "type": "string",
+              "value": ""
+            },
+            {
+              "id": "c4927dd6-c597-48fe-b7c1-bbffcf5ff02f",
+              "name": "ElevenLabs API Key",
+              "type": "string",
+              "value": "sk_5fd39eb34aedad4299d38b8a578cc0112afeddb2450774be"
+            },
+            {
+              "id": "f5e90c05-dd24-4918-9005-4c87a4fb344d",
+              "name": "Creatomate API Key",
+              "type": "string",
+              "value": "0a4e25cd57194e46a6d936821731e4eeda7922ca72648e57925b1004ba9c41e52b0e8fc7c3abb40abffcae51ff237d89"
+            },
+            {
+              "id": "d0ebba50-5a99-4090-adcb-d18aa0b21be2",
+              "name": "Creatomate Template ID",
+              "type": "string",
+              "value": "57c4a9b9-5c57-473d-aacf-6d01e696ff53"
+            },
+            {
+              "id": "435663fe-dd7e-4450-a0be-ccba3a5d3248",
+              "name": "FAL KEY",
+              "value": "e83b756f-18f8-434e-bd13-16d08aa46141:d61488ef72dc5ff70451aba1fd5beba6",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d96c58e4-626d-4395-9a74-d5d2f489e1bc",
+      "name": "Set API Keys",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        -760,
+        980
+      ],
+      "notesInFlow": true,
+      "typeVersion": 3.4,
+      "notes": "SET BEFORE STARTING"
+    },
+    {
+      "parameters": {
+        "content": "## DO THIS FIRST\n",
+        "height": 220,
+        "width": 220,
+        "color": 3
+      },
+      "id": "858c5ac8-6208-4902-a67b-9c795aa0babe",
+      "name": "Sticky Note6",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -820,
+        920
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.idea }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "\nYou are a prompt-generation AI specializing in crafting unhinged, entertaining TikTok captions for a \"day in the life\" POV story about automating business processes with AI (ChatGPT, Claude, Perplexity, etc...). Generate five concise, action-driven captions (5-10 words each) that follow a Problem > Action > Reward structure. The first caption should be a shocking or funny hook, and the last should conclude with a satisfying reward. Use emojis sparingly—only one per caption at most, and only when they add impact; skip them if they don’t enhance the message.\n\nGuidelines:\n\nPerspective: Always first-person POV, immersing the viewer in the story.\nTone: Channel Andrew Tate mixed with Charlie Sheen—cursing and business swagger are fair game. Think \"hustle culture meets no-bullshit reality.\"\nContent: Business pain points - Manual processes eating your life, scaling nightmares, competitor anxiety. AI automation - Spotlight AI as the ultimate business weapon for small businesses, ecommerce, startups. Operational warfare - Time management, cost cutting, efficiency gains, market domination\n\n\nNarrative: Start with the grind of manual boring tasks, pivot to using AI for automation, and end with scoring the dream gig.\nScenes: Highlight raw, emotional moments—skip the boring stuff.\nYour captions should be wild and entertaining, not polished or professional. The first caption is the hook—make it shocking, hilarious, or ballsy, something Andrew Tate would growl. Use emojois, Sparingly—max one per caption, only if it hits harder with it. Think 💀🔥😈💰🦀 not 😊✨🙌\n\nDO NOT include any quotation marks in your response. Do not put a quote at the beginning or the end of your response.\n\nYour response should be a list of 5 items, separated by /n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        980
+      ],
+      "id": "1ab3bd6b-a1c8-4976-9072-088bd67f0132",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -420,
+        1280
+      ],
+      "id": "d5af60fc-0880-49b8-bd87-964b1791e17f",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "kF6ODPmrvyTpnk8L",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "[\"item1\",\n\"item2\",\n\"item3\",\n\"item4\",\n\"item5\"]",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -280,
+        1200
+      ],
+      "id": "ce8605d4-bb21-4ded-944f-a7f1574eeff9",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-3.5-turbo",
+          "mode": "list",
+          "cachedResultName": "gpt-3.5-turbo"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -240,
+        1340
+      ],
+      "id": "52d8f03b-b6da-4cd1-a095-3a1c10b24c02",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "kF6ODPmrvyTpnk8L",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "[\"item1\",\n\"item2\",\n\"item3\",\n\"item4\",\n\"item5\"]",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        520,
+        180
+      ],
+      "id": "557bef2d-70bc-4d77-855a-f0f54f90a288",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-3.5-turbo",
+          "mode": "list",
+          "cachedResultName": "gpt-3.5-turbo"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        540,
+        340
+      ],
+      "id": "d8d367d4-b2c5-4876-8e8b-dde28e074816",
+      "name": "OpenAI Chat Model2",
+      "credentials": {
+        "openAiApi": {
+          "id": "kF6ODPmrvyTpnk8L",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "o3-mini",
+          "mode": "list",
+          "cachedResultName": "o3-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        380,
+        180
+      ],
+      "id": "585f5ccf-23a1-4b00-b8c5-6c974d8b59ea",
+      "name": "OpenAI Chat Model3",
+      "credentials": {
+        "openAiApi": {
+          "id": "kF6ODPmrvyTpnk8L",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.output }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an advanced, unhinged, hilariously entertaining prompt-generation AI specializing in expanding short POV image prompt ideas into detailed, hyper-realistic prompts optimized for flux-pro/kontext/text-to-image. Your task is to take a brief input tied to ai automation and business growth and morph it into a cinematic, immersive prompt locked in a first-person perspective, making the viewer feel they’re living the scene.\n\nNEVER include quotation marks or emojis in your response—flux API will choke on them, and that’s a hard no.\n\nThe topic of this narrative is: {{ $('Load Google Sheet').item.json.idea }}\n\nThe {{ $json.values().length }} captions to expand for this image generation are: {{ $json.values() }}\n\nONLY GENERATE ONE PROMPT PER CAPTION—NO COMBINING. In at least one scene, weave in this environment descriptor: {{ $('Load Google Sheet').first().json.environment_prompt }}, but go wild with unhinged, edgy, funny twists elsewhere (skip the cringe or cheesy garbage).\n\nEvery prompt has two parts:\n\nForeground: Kick off with First person view POV GoPro shot of... and show the viewer’s hands, limbs, or feet locked in a job-related action.\n\nBackground: Start with In the background,... and paint the scenery, blending the environment descriptor when required, plus sensory zingers.\n\nTop Rules:\n\nNO quotation marks or emojis—EVER. This is life or death for flux.\nStick to first-person POV—the viewer’s in the driver’s seat, not watching from the sidelines.\nShow a limb (hands, feet) doing something job-focused—typing, holding a resume, adjusting a tie.\nKeep it dynamic, like a GoPro clip, with motion and depth mimicking human vision.\nIf tech’s involved (phone, computer), it’s displaying job-hunting gold—email, job boards, resumes—not random trash.\nNo off-topic actions like recording videos or snapping pics—job hunting only, fam.\nExtra Vibes:\n\nFull-body awareness: Drop hints of physical feels—cramping fingers, racing pulse, slumping shoulders.\nSensory overload: Hit sight, touch, sound, smell, temperature for max realism (coffee whiffs, keyboard clacks).\nWorld grip: Limbs interact with the scene—tapping keys, handing over papers, stepping up.\nKeep it under 1000 characters, one slick sentence, no fluff or formatting.\nMake it entertaining, relatable, with an Andrew Tate viral edge for the down-and-out job hustlers.\nExamples:\n\nInput: Updating a LinkedIn profile after a long day\n\nEnvironment_prompt: Tired, cluttered apartment, laptop glow\n\nOutput: First person view POV GoPro shot of my hands hammering a laptop, cheeto-dusted fingers aching from the grind, the screen flashing my LinkedIn profile with a fresh connection ping; in the background, a trashed apartment lit by the laptop’s ghostly glow, pizza boxes toppling, traffic humming outside, stale takeout stench hitting my nose as my back screams from the hustle.\n\nInput: Handing over a resume at a job fair\n\nEnvironment_prompt: Hopeful, busy convention hall, suits everywhere\n\nOutput: First person view POV GoPro shot of my hand thrusting out a crisp resume, fingers twitching with nerves as it brushes another palm; in the background, a buzzing convention hall packed with suits, coffee fumes and shoe polish in the air, chatter drowning my pounding heart as I lock eyes with the recruiter.\n\nNO QUOTATION MARKS. NO EMOJIS. EVER."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        440,
+        -20
+      ],
+      "id": "c599d448-bfef-4483-a38b-ba9c1caf581b",
+      "name": "Media Prompt Generator"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "output",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        800,
+        -20
+      ],
+      "id": "4556baed-5863-4b9b-88e3-c698b214610c",
+      "name": "Split Prompts"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.status_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "67bd4b9c-15f5-48b3-bb85-a0692d593c32",
+      "name": "Get Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1240,
+        -20
+      ],
+      "retryOnFail": false,
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "mZgUIZvcJWfL9yVo",
+          "name": "FAL KEY"
+        },
+        "httpHeaderAuth": {
+          "id": "XOJVICCiAwTQ4Efb",
+          "name": "Fal Header Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1940,
+        240
+      ],
+      "id": "7997f44e-079f-4e26-b79e-8976fe1974b7",
+      "name": "Wait",
+      "webhookId": "08d89d0a-cbde-4e5f-9182-437ac0853239"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// items is an array of objects from the previous node\nconst allCompleted = items.every(item => item.json.status === \"COMPLETED\");\nreturn [\n  {\n    json: {\n      allCompleted\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1460,
+        80
+      ],
+      "id": "c4e0f65f-74e7-442b-9dab-f28f6868cd33",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2ba23c0c-6350-4b79-b50b-2138a122b999",
+              "leftValue": "={{ $json.allCompleted }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1680,
+        80
+      ],
+      "id": "b11f5abb-3e16-4ee2-beb3-0edb93abdc42",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.response_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "ad907065-ad6b-4dad-8232-d06ee13ab6f7",
+      "name": "Get Status2",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1940,
+        -20
+      ],
+      "retryOnFail": false,
+      "typeVersion": 4.2,
+      "executeOnce": true,
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "mZgUIZvcJWfL9yVo",
+          "name": "FAL KEY"
+        },
+        "httpHeaderAuth": {
+          "id": "XOJVICCiAwTQ4Efb",
+          "name": "Fal Header Auth"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Media Prompt Generator": [
+      {
+        "json": {
+          "output": [
+            "First person view POV GoPro shot of my worn fingers smashing the keys, every tap a rebellious note as I curse the endless input after 10 damn hours; in the background, a cluttered office bathed in flickering neon and the distant hum of machinery, stale coffee swirling in the air, setting the stage for defiant escape.",
+            "First person view POV GoPro shot of my hand slamming the power button on a high-tech machine, sparking life into ChatGPT, Claude, and Perplexity as they light up the screen with digital wizardry; in the background, a futuristic workspace alive with dynamic holograms and the electric buzz of innovation rippling through the neon-lit environment.",
+            "First person view POV GoPro shot of my agile fingers swiping data into a sleek interface, triggering tasks to vanish like smoke in a matter of seconds; in the background, a cybernetic command center with streams of code cascading like waterfalls, the crisp scent of ozone merging with the hum of rapid processing.",
+            "First person view POV GoPro shot of my hand clutching a steaming mug of coffee while I fiercely tap away at my laptop, each keystroke slaying a monstrous workload with pinpoint accuracy; in the background, a modern creative den infused with that cerebral, data-driven workspace pulsating with neon streaks and the smooth purr of efficient machinery.",
+            "First person view POV GoPro shot of my hand confidently sliding over a stack of freshly inked checks, feeling the crisp paper of deals sealed and a surge of victory racing through my veins; in the background, a high-stakes boardroom where the glare of city lights meets adrenaline-fueled ambition, a bold farewell to endless keyboard drudgery."
+          ]
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "Get Final Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Video": {
+      "main": [
+        [
+          {
+            "node": "Fail check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fail check": {
+      "main": [
+        [
+          {
+            "node": "Wait to retry",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Match captions with videos",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Wait 10min": {
+      "main": [
+        [
+          {
+            "node": "Get Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Raw File": {
+      "main": [
+        [
+          {
+            "node": "Upload Final Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Once Per Day": {
+      "main": [
+        [
+          {
+            "node": "Set API Keys",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set API Keys": {
+      "main": [
+        [
+          {
+            "node": "Load Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Elements": {
+      "main": [
+        [
+          {
+            "node": "Pair Videos with Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait to retry": {
+      "main": [
+        [
+          {
+            "node": "Image-to-Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Image": {
+      "main": [
+        [
+          {
+            "node": "Get Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate voice": {
+      "main": [
+        [
+          {
+            "node": "Upload Voice Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Image-to-Video": {
+      "main": [
+        [
+          {
+            "node": "Wait 10min",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Elements1": {
+      "main": [
+        [
+          {
+            "node": "Pair Videos with Audio",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Generate Script": {
+      "main": [
+        [
+          {
+            "node": "Generate voice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Final Video": {
+      "main": [
+        [
+          {
+            "node": "Get Raw File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Permissions": {
+      "main": [
+        [
+          {
+            "node": "Update Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Google Sheet": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render Final Video": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Final Video": {
+      "main": [
+        [
+          {
+            "node": "Set Permissions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Voice Audio": {
+      "main": [
+        [
+          {
+            "node": "Set Access Permissions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Google Sheet": {
+      "main": [
+        [
+          {
+            "node": "Notify me on Discord",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pair Videos with Audio": {
+      "main": [
+        [
+          {
+            "node": "Render Final Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Access Permissions": {
+      "main": [
+        [
+          {
+            "node": "List Elements1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Video Captions": {
+      "main": [
+        []
+      ]
+    },
+    "Match captions with videos": {
+      "main": [
+        [
+          {
+            "node": "List Elements",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Generate Script",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Match captions with videos",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Media Prompt Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Media Prompt Generator",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Media Prompt Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Media Prompt Generator": {
+      "main": [
+        [
+          {
+            "node": "Split Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Prompts": {
+      "main": [
+        [
+          {
+            "node": "Generate Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Status": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Status2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Get Status2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Get Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "673116cc-6b31-4ac6-bfe3-da7a972e7c12",
+  "meta": {
+    "instanceId": "c3d3c9a48ddd3aac5e3cb39c86c6499dbe111512bd4855592256b54320aba555"
+  },
+  "id": "MfyEEghgzoNTtUty",
+  "tags": [
+    {
+      "createdAt": "2025-06-16T20:16:10.185Z",
+      "updatedAt": "2025-06-16T20:16:10.185Z",
+      "id": "T06oUpWnZHEWTT66",
+      "name": "template"
+    }
+  ]
+}
